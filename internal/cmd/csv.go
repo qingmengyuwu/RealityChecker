@@ -88,13 +88,30 @@ func extractDomainsFromCSV(records [][]string) []string {
 	var domains []string
 	domainSet := make(map[string]bool) // 用于去重
 
-	// 跳过标题行，从第二行开始处理
+	if len(records) == 0 {
+		return domains
+	}
+
+	// 按表头定位域名列，兼容扫描器版本之间的列顺序变化。
+	domainColumn := -1
+	for i, header := range records[0] {
+		header = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(header), "\uFEFF"))
+		if strings.EqualFold(header, "CERT_DOMAIN") {
+			domainColumn = i
+			break
+		}
+	}
+	if domainColumn == -1 {
+		return domains
+	}
+
+	// 跳过标题行，从第二行开始处理。
 	for i := 1; i < len(records); i++ {
-		if len(records[i]) < 3 {
+		if len(records[i]) <= domainColumn {
 			continue
 		}
 
-		certDomain := strings.TrimSpace(records[i][2]) // CERT_DOMAIN列
+		certDomain := strings.TrimSpace(records[i][domainColumn]) // CERT_DOMAIN列
 		if certDomain == "" {
 			continue
 		}
